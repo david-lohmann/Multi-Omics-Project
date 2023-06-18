@@ -1,39 +1,7 @@
-##########################################################################################
-##########################################################################################
-######################### APPLIED COMPUTATIONAL MULTI-OMICS ##############################
-################################ TUTORIAL 4 - RNAseq #####################################
-##########################################################################################
-##########################################################################################
-
-
-#This practical tutorial will perform differentia gene expression analysis using R packages. 
-#Most steps will be performed using edgeR R package, which complete tutorial can be found here: https://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
-
-
-#########################################################################################################################
-# Install packages from R and BioConductor repositories ####
-#########################################################################################################################
-if (!require("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-
-BiocManager::install("tximport")
-BiocManager::install("rhdf5")
-BiocManager::install("PCAtools")
-BiocManager::install("edgeR")
-
-install.packages("gplots")
-install.packages("RColorBrewer")
-install.packages("openxlsx")
-
-#########################################################################################################################
-# Import read counts to R ####
-# We will import the read counts obtained with Kallisto (Turorial 3) using the tximport R package
-#########################################################################################################################
-
 library(tximport)
 
 # First, set the R working directory to the folder containing Kallisto results 
-setwd("\\wsl.localhost\Ubuntu\hom4e\advanced_omics\data_lesson_2") #Complete with the path in your computer
+setwd("") #Complete with the path in your computer
 
 # Load the file containing the EnsemblIDs and gene names
 load('gencode.v38_geneInfo.RData');
@@ -60,16 +28,11 @@ rownames(readCounts_gene$abundance) <- rownames(readCounts_gene$counts) <- geneN
 head(readCounts_gene$abundance)
 head(readCounts_gene$counts)
 
-
 # Save readCounts in an RData file for downstream analyses
 save(readCounts_gene, file="readCounts_gene.RData")
 
-#########################################################################################################################
-# Explore transcriptome profiles using PCA ####
-#########################################################################################################################
 
 library(PCAtools)
-
 # Prepare gene expression matrix for PCA analysis: Step 1) get log TPMs (we add 1 TPM to each gene to avoid infinite values after log)
 logTPMs <- log2(readCounts_gene$abundance+1)
 
@@ -77,12 +40,10 @@ logTPMs <- log2(readCounts_gene$abundance+1)
 uniqueGenes <- unique(rownames(logTPMs))
 logTPMs <- logTPMs[uniqueGenes,]
 
-
 #Prepare metadata with sample type
 sampleTypes <- gsub("_rep[1234]", "", colnames(logTPMs))
 metaData <- data.frame(sampleTypes); rownames(metaData) <- colnames(logTPMs)
 metaData
-
 
 #Run PCA
 pca.res <- pca(logTPMs, metadata=metaData)
@@ -96,14 +57,11 @@ biplot(pca.res, colby="sampleTypes", hline = 0, vline = 0,legendPosition = 'top'
 biplot(pca.res, lab="", colby="sampleTypes", hline = 0, vline = 0,legendPosition = 'top') # Biplot without sample names
 biplot(pca.res, x="PC2", y="PC3",lab="",colby="sampleTypes", hline = 0, vline = 0,legendPosition = 'top') # Biplot with PC1 and PC3
 
-
 #Plot several components
 pairsplot(pca.res, colby="sampleTypes")
 pairsplot(pca.res)
 
 # Plot the component loadings and label genes most responsible for variation
-# NOTE: Loadings are interpreted as the coefficients of the linear combination of the initial variables from which the principal components are constructed.
-# From a statistical point of view, the loadings are equal to the coordinates of the variables divided by the square root of the eigenvalue associated with the component.
 PC_genes <- pca.res$loadings
 PC1_genes <- PC_genes[order(PC_genes$PC1, decreasing=T),]
 head(PC1_genes)
@@ -119,19 +77,14 @@ legend("topleft", fill=unique(plotCol), legend=c("MYBL2","ctrl"), bty="n")
 barplot(logTPMs["ATP6V0E2",], col=plotCol, las=2, main="SNORD89", ylab="Expression levels (logTPMs)") #Gene negatively correlated with PC1
 legend("topright", fill=unique(plotCol), legend=c("actFOXO1","ctrl"), bty="n")
 #SNORD89,MIR4292,RNU6-216P
-#RDH11,
+#RDH11, ATP6V0E2
 
 
-# You can save some plot in a pdf file
 pdf("PCA_plots.pdf") # open pdf file
-biplot(pca.res, colby="sampleTypes", hline = 0, vline = 0,legendPosition = 'top') # Biplot with colors by sample type
+biplot(pca.res, colby="sampleTypes", hline = 0, vline = 0,legendPosition = 'top')
 plotloadings(pca.res, components = c("PC1", "PC2", "PC3"),rangeRetain =0.1) 
-dev.off() # closes pdf file
+dev.off()
 
-
-#########################################################################################################################
-# Differential expression analysis using edge R package ####
-#########################################################################################################################
 
 
 library(edgeR)
@@ -150,7 +103,6 @@ y$samples
 
 
 # Define the design and contrast matrix based on the experimental design, meaning define which comparison to be made
-# See more detailed information here: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7873980/
 design_matrix <-ifelse(grepl("wt",sampleTypes),"wt","knockout")
 design_matrix <- model.matrix(~0+sampleTypes)
 colnames(design_matrix) <- gsub("sampleTypes", "", colnames(design_matrix))
@@ -162,9 +114,6 @@ contrast_matrix
 
 
 # Estimate the dispersion (Biological coefficient of variation) and Fit model
-# edgeR uses the negative binomial (NB) distribution to model the read counts for each gene in each sample. The dispersion parameter of the NB distribution accounts for variability between biological replicates (McCarthy, Chen, and Smyth 2012). edgeR estimates an empirical Bayes moderated dispersion for each individual gene. It also estimates a common dispersion, which is a global dispersion estimate averaged over all genes, and a trended dispersion where the dispersion of a gene is predicted from its abundance.
-# The vertical axis of the plotBCV plot shows square-root dispersion, also known as biological coefficient of variation (BCV) (McCarthy, Chen, and Smyth 2012).
-# For RNA-seq studies, the NB dispersions tend to be higher for genes with very low counts. The dispersion trend tends to decrease smoothly with abundance and to asymptotic to a constant value for genes with larger counts. From our past experience, the asymptotic value for the BCV tends to be in range from 0.05 to 0.2 for genetically identical mice or cell lines, whereas somewhat larger values (>0.3) are observed for human subjects.
 y <- estimateDisp(y, design_matrix)
 plotBCV(y)
 fit <- glmQLFit(y,design_matrix) # Fit a quasi-likelihood negative binomial generalized log-linear model to count data. 
