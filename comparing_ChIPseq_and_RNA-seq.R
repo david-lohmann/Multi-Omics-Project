@@ -1,4 +1,3 @@
-setwd("C:\\Users\\jdpl2\\OneDrive\\Ambiente de Trabalho\\Mestrado\\2º Semestre\\Métodos Computacionais em Multi-Ómicas\\Projeto\\ChIP-seq results\\macs2_filter\\")
 
 peakfile <-read.table("MYBL2_peaks.narrowPeak")
 colnames(peakfile) <- c("chrom","chromStart","chromEnd","name","score","strand","signalValue","pValue","qValue","peak")
