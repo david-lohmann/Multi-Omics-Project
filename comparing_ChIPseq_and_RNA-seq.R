@@ -67,7 +67,7 @@ length(anno.gr1$gene_name)
 #Número peaks
 
 
-setwd("C:\\Users\\jdpl2\\OneDrive\\Ambiente de Trabalho\\Mestrado\\2º Semestre\\Métodos Computacionais em Multi-Ómicas\\Projeto\\data\\")
+
 library(readxl)
 DGEs <- read_excel("DEGs.xlsx")
 
