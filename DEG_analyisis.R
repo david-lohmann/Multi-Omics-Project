@@ -153,11 +153,10 @@ text(plotData[upReg[1:5],], labels=upReg[1:5],col="tomato", pos=sample(c(1:3), s
 text(plotData[downReg[1:5],], labels=downReg[1:5],col="steelblue", pos=sample(c(1:2), size=10, replace=T), cex=0.8)
 
 
-# Heatmap with Top DEGs
+# Heatmap with common genes between DEG and Chip-seq
 library(gplots); library(RColorBrewer)
 plotCol_exp <- brewer.pal(9, "Purples")
-heatmap.2(logTPMs[c(upReg[1:10], downReg[1:10]),], scale="row", trace="none", density.info="none", ColSideColors = plotCol, col=plotCol_exp)
-
+heatmap.2(logTPMs[c(commom_genes[1:10], downReg[1:10]),], scale="row", trace="none", density.info="none", ColSideColors = plotCol, col=plotCol_exp)
 
 # Get all expressed genes (DEGs)
 summary(decideTests(qlf,p.value = 0.05,adjust.method = "fdr"))
